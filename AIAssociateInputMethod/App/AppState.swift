@@ -113,7 +113,8 @@ final class AppState {
     @MainActor
     private func handleCompletionUpdate(_ completion: String) {
         DebugLog.log("Completion update: \(completion.prefix(50))")
-        if completion.isEmpty {
+        // Don't show overlay if input is empty/too short (e.g. user just sent message via Enter)
+        if completion.isEmpty || accessibilityMonitor.currentText.count < 2 {
             overlayController.hide()
             keyboardMonitor.isOverlayVisible = false
         } else {
