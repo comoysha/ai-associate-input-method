@@ -109,6 +109,8 @@ open .build/AIAssociateInputMethod.app
 | Base URL | `https://ark.cn-beijing.volces.com/api/v3` | API 地址 |
 | Max Tokens | 64 | 补全最大长度 |
 | Debounce | 300ms | 打字停顿多久后触发预测 |
+| Auto Dismiss | 5s | 浮窗自动消失时间（1-30秒） |
+| System Prompt | 续写用户正在输入的文字... | 发送给 LLM 的系统提示词，可自定义 |
 
 ## 项目结构
 
@@ -132,8 +134,17 @@ App 运行时会写日志到 `~/ai_associate_debug.log`：
 tail -f ~/ai_associate_debug.log
 ```
 
+## 智能触发规则
+
+- 输入至少 2 个字符后才会触发预测
+- 按 Tab 接受补全后，需要有新的输入才会触发下一次预测
+- 回车发送消息后（输入框清空），不会触发预测
+- 切换应用时不会误触发预测
+- 页面上下文（聊天记录）在切换应用时读取一次并缓存，打字过程中不会重复读取
+
 ## 已知限制
 
-- 每次重新编译签名后需要重新授权辅助功能权限
+- 每次重新编译签名后需要重新授权辅助功能权限（辅助功能里关掉再开启）
 - 光标定位依赖 Accessibility API，部分应用可能不支持精确定位
 - 使用中文输入法时，在候选词阶段无法触发预测，需等文字确认后
+- 页面上下文通过 Accessibility API 读取，部分应用可能无法获取完整内容
