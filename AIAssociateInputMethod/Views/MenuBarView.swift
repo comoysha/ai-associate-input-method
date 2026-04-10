@@ -134,5 +134,28 @@ struct MenuBarView: View {
             Stepper("\(appState.settings.debounceMs)ms", value: $appState.settings.debounceMs, in: 100...1000, step: 100)
                 .font(.system(size: 11))
         }
+
+        HStack {
+            Text("Auto Dismiss")
+                .font(.system(size: 11))
+            Spacer()
+            Stepper("\(appState.settings.overlayDismissSec)s", value: $appState.settings.overlayDismissSec, in: 1...30, step: 1)
+                .font(.system(size: 11))
+                .onChange(of: appState.settings.overlayDismissSec) {
+                    appState.syncOverlayDismiss()
+                }
+        }
+
+        Divider()
+
+        VStack(alignment: .leading, spacing: 6) {
+            Text("System Prompt")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            TextEditor(text: $appState.settings.systemPrompt)
+                .font(.system(size: 11))
+                .frame(height: 80)
+                .border(Color.secondary.opacity(0.3), width: 1)
+        }
     }
 }

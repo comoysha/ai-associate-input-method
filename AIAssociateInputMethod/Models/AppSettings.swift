@@ -35,6 +35,19 @@ final class AppSettings {
         set { UserDefaults.standard.set(newValue, forKey: "debounceMs") }
     }
 
+    var overlayDismissSec: Int {
+        get { UserDefaults.standard.integer(forKey: "overlayDismissSec").nonZero ?? 5 }
+        set { UserDefaults.standard.set(newValue, forKey: "overlayDismissSec") }
+    }
+
+    var systemPrompt: String {
+        get {
+            UserDefaults.standard.string(forKey: "systemPrompt")
+                ?? "续写用户正在输入的文字。直接输出续写内容，不要重复用户已输入的部分。只输出一种最可能的续写，不超过30个字。不要输出任何解释。"
+        }
+        set { UserDefaults.standard.set(newValue, forKey: "systemPrompt") }
+    }
+
     var isConfigured: Bool {
         !apiKey.isEmpty && !endpointId.isEmpty
     }

@@ -6,6 +6,8 @@ final class OverlayController {
     private var textField: NSTextField?
     private var hintLabel: NSTextField?
     var isVisible: Bool = false
+    private var dismissTimer: Timer?
+    var dismissSeconds: Int = 5
 
     func show(text: String, near cursorRect: CGRect) {
         guard !text.isEmpty else {
@@ -60,6 +62,12 @@ final class OverlayController {
         panel.alphaValue = 1
         panel.orderFrontRegardless()
         isVisible = true
+
+        // Auto-dismiss timer
+        dismissTimer?.invalidate()
+        dismissTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(dismissSeconds), repeats: false) { [weak self] _ in
+            self?.hide()
+        }
     }
 
     func hide() {
@@ -67,6 +75,8 @@ final class OverlayController {
             DispatchQueue.main.async { self.hide() }
             return
         }
+        dismissTimer?.invalidate()
+        dismissTimer = nil
         guard isVisible, let panel else { return }
         panel.orderOut(nil)
         isVisible = false

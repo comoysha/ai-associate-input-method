@@ -65,7 +65,7 @@ final class CompletionEngine {
 
         currentTask = Task {
             var accumulated = ""
-            let messages = PromptBuilder.buildMessages(context: context)
+            let messages = PromptBuilder.buildMessages(context: context, settings: settings)
 
             logger.debug("Requesting completion for: \(context.currentInput.prefix(30))...")
 

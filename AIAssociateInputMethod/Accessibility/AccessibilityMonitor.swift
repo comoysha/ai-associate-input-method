@@ -10,6 +10,9 @@ final class AccessibilityMonitor {
 
     private var timer: Timer?
     private var previousText: String = ""
+    private var previousAppPID: pid_t = 0
+    private var cachedPageContent: String = ""
+    private var pageContentStale: Bool = true
     private let logger = Logger(subsystem: "com.aiassociate.inputmethod", category: "AXMonitor")
 
     var onTextChanged: ((String) -> Void)?
@@ -33,7 +36,15 @@ final class AccessibilityMonitor {
         guard let frontApp = NSWorkspace.shared.frontmostApplication else { return }
         focusedAppName = frontApp.localizedName ?? "Unknown"
 
-        let appElement = AXUIElementCreateApplication(frontApp.processIdentifier)
+        // When switching apps, skip the first poll to avoid false trigger
+        let pid = frontApp.processIdentifier
+        if pid != previousAppPID {
+            previousAppPID = pid
+            previousText = "\0__APP_SWITCH__"
+            pageContentStale = true
+        }
+
+        let appElement = AXUIElementCreateApplication(pid)
 
         // Get focused element
         var focusedValue: AnyObject?
@@ -66,8 +77,11 @@ final class AccessibilityMonitor {
         // Get cursor position on screen
         updateCursorRect(element: focusedElement)
 
-        // Notify if text changed
-        if text != previousText {
+        // Notify if text changed (skip first poll after app switch)
+        if previousText == "\0__APP_SWITCH__" {
+            // First poll after switching app — sync without triggering
+            previousText = text
+        } else if text != previousText {
             previousText = text
             onTextChanged?(text)
         }
@@ -116,8 +130,16 @@ final class AccessibilityMonitor {
         cursorScreenRect = CGRect(x: position.x, y: position.y + size.height, width: 1, height: 16)
     }
 
-    /// Read all visible text from the page (for conversation context)
+    /// Read all visible text from the page (cached, only refreshes on app/window switch)
     func readPageContent() -> String {
+        if pageContentStale {
+            cachedPageContent = fetchPageContent()
+            pageContentStale = false
+        }
+        return cachedPageContent
+    }
+
+    private func fetchPageContent() -> String {
         guard let frontApp = NSWorkspace.shared.frontmostApplication else { return "" }
         let appElement = AXUIElementCreateApplication(frontApp.processIdentifier)
 
@@ -126,15 +148,17 @@ final class AccessibilityMonitor {
         let winResult = AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &windowValue)
         guard winResult == .success, let window = windowValue else { return "" }
 
-        // Traverse the AX tree to collect all static text
+        // Traverse the AX tree to collect text (limited)
         var texts: [String] = []
-        collectTexts(element: window as! AXUIElement, texts: &texts, depth: 0, maxDepth: 15)
+        collectTexts(element: window as! AXUIElement, texts: &texts, depth: 0, maxDepth: 10)
 
         return texts.joined(separator: "\n")
     }
 
+    private let maxTextNodes = 100
+
     private func collectTexts(element: AXUIElement, texts: inout [String], depth: Int, maxDepth: Int) {
-        guard depth < maxDepth else { return }
+        guard depth < maxDepth, texts.count < maxTextNodes else { return }
 
         // Get role
         var roleValue: AnyObject?
